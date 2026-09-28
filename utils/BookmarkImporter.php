@@ -62,7 +62,9 @@ class BookmarkImporter
 			$tags_attr = $link->getAttribute('tags');
 			$title = trim($link->textContent);
 
-			if (empty($url) || str_starts_with($url, 'javascript:')) {
+			$scheme = parse_url($url, PHP_URL_SCHEME);
+			if (!is_string($scheme) || !in_array(strtolower($scheme), ['http', 'https'], true) ||
+				filter_var($url, FILTER_VALIDATE_URL) === false) {
 				$skipped_count++;
 				continue;
 			}

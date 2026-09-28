@@ -103,7 +103,7 @@ function startSession(): void
 		'cookie_lifetime' => $session_lifetime,
 		'gc_maxlifetime' => $session_lifetime,
 		'cookie_path' => '/',
-		'cookie_secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+		'cookie_secure' => Config::publicHttps() || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'),
 		'cookie_httponly' => true,
 		'cookie_samesite' => 'Lax',
 	]);
@@ -115,6 +115,7 @@ function loginUser(int $user_id): void
 		startSession();
 	}
 
+	session_regenerate_id(true);
 	$_SESSION['user_id'] = $user_id;
 }
 
@@ -124,7 +125,8 @@ function logoutUser(): void
 		return;
 	}
 
-	$_SESSION['user_id'] = null;
+	$_SESSION = [];
+	session_regenerate_id(true);
 }
 
 function getLoggedInUser()

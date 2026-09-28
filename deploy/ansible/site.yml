@@ -1,0 +1,202 @@
+---
+- name: Deploy Faved inside its unprivileged LXC
+  hosts: faved
+  become: true
+  gather_facts: true
+  vars:
+    faved_admin_user: faved-admin
+    faved_operator_user: faved-operator
+  pre_tasks:
+    - name: Require a Debian container, pinned source and admin key
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'Debian'
+          - faved_git_ref is match('^[0-9a-f]{40}$')
+          - faved_admin_keys | default([]) | length > 0
+          - faved_oidc_allowed_subs | length > 0
+          - faved_oidc_issuer is match('^https://')
+          - faved_oidc_redirect_uri is match('^https://')
+  tasks:
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name: [ca-certificates, git, curl, gnupg, python3-apt, python3-debian, sudo]
+        state: present
+        update_cache: true
+
+    - name: Create Docker APT keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Install Docker APT signing key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/debian/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: Configure Docker APT source
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ ansible_architecture | replace('x86_64', 'amd64') }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+        filename: docker
+        state: present
+        update_cache: true
+
+    - name: Remove packages that conflict with Docker Engine
+      ansible.builtin.apt:
+        name: [docker.io, docker-compose, docker-doc, docker-buildx, podman-docker, containerd, runc]
+        state: absent
+
+    - name: Install Docker Engine and Compose
+      ansible.builtin.apt:
+        name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+        state: present
+
+    - name: Enable Docker
+      ansible.builtin.systemd_service:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Create admin and operator accounts
+      ansible.builtin.user:
+        name: "{{ item }}"
+        shell: /bin/bash
+        create_home: true
+        groups: "{{ 'sudo' if item == faved_admin_user else '' }}"
+        append: false
+      loop:
+        - "{{ faved_admin_user }}"
+        - "{{ faved_operator_user }}"
+
+    - name: Install administrator public keys
+      ansible.posix.authorized_key:
+        user: "{{ faved_admin_user }}"
+        key: "{{ faved_admin_keys | join('\n') }}"
+        exclusive: true
+
+    - name: Install operator public keys
+      ansible.posix.authorized_key:
+        user: "{{ faved_operator_user }}"
+        key: "{{ faved_operator_keys | join('\n') }}"
+        exclusive: true
+      when: faved_operator_keys | default([]) | length > 0
+
+    - name: Permit operators to restart only Faved
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/faved-operator
+        mode: '0440'
+        content: "{{ faved_operator_user }} ALL=(root) NOPASSWD: /bin/systemctl restart faved.service\n"
+        validate: /usr/sbin/visudo -cf %s
+
+    - name: Permit key-authenticated system admins to use sudo
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/faved-admin
+        mode: '0440'
+        content: "{{ faved_admin_user }} ALL=(ALL:ALL) NOPASSWD: ALL\n"
+        validate: /usr/sbin/visudo -cf %s
+
+    - name: Create data and secret directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: /var/lib/faved, mode: '0750' }
+        - { path: /var/lib/faved/storage, mode: '0770' }
+        - { path: /etc/faved, mode: '0700' }
+
+    - name: Grant container www-data ownership of Faved storage
+      ansible.builtin.file:
+        path: /var/lib/faved/storage
+        owner: '33'
+        group: '33'
+        mode: '0700'
+
+    - name: Check out reviewed Faved commit
+      ansible.builtin.git:
+        repo: "{{ faved_git_url }}"
+        dest: /opt/faved
+        version: "{{ faved_git_ref }}"
+        update: true
+        force: false
+
+    - name: Write OIDC client secret
+      ansible.builtin.copy:
+        dest: /etc/faved/client-secret
+        owner: root
+        group: '33'
+        mode: '0440'
+        content: "{{ faved_oidc_client_secret }}"
+      no_log: true
+
+    - name: Write OIDC runtime configuration
+      ansible.builtin.copy:
+        dest: /etc/faved/oidc.env
+        owner: root
+        group: root
+        mode: '0600'
+        content: |
+          OIDC_ISSUER={{ faved_oidc_issuer }}
+          OIDC_CLIENT_ID={{ faved_oidc_client_id }}
+          OIDC_REDIRECT_URI={{ faved_oidc_redirect_uri }}
+          OIDC_ALLOWED_SUBS={{ faved_oidc_allowed_subs }}
+      no_log: true
+
+    - name: Install Faved service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/faved.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Faved bookmark manager
+          Requires=docker.service
+          After=docker.service
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          WorkingDirectory=/opt/faved/deploy
+          ExecStart=/usr/bin/docker compose --env-file /etc/faved/oidc.env -f compose.yaml up --build --detach
+          ExecStop=/usr/bin/docker compose --env-file /etc/faved/oidc.env -f compose.yaml stop
+          TimeoutStartSec=900
+          [Install]
+          WantedBy=multi-user.target
+      register: faved_service_unit
+
+    - name: Reload systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+      when: faved_service_unit.changed
+
+    - name: Start Faved
+      ansible.builtin.systemd_service:
+        name: faved
+        enabled: true
+        state: restarted
+
+    - name: Verify local HTTP readiness
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8080/api/auth/oidc/config
+        return_content: true
+      register: faved_health
+      retries: 20
+      delay: 3
+      until: faved_health.status == 200 and faved_health.json.enabled == true
+
+    - name: Disable SSH root and password login after admin key is installed
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/60-faved-hardening.conf
+        mode: '0644'
+        content: |
+          PermitRootLogin no
+          PasswordAuthentication no
+          KbdInteractiveAuthentication no
+      notify: Reload SSH
+
+  handlers:
+    - name: Reload SSH
+      ansible.builtin.systemd_service:
+        name: ssh
+        state: reloaded

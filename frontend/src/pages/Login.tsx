@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import z from 'zod';
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { StoreContext } from '@/store/storeContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../components/ui/form';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -17,6 +17,13 @@ const formSchema = z.object({
   password: z.string().min(1, { message: 'Password is required' }),
 });
 export const Login = observer(() => {
+  const [oidcEnabled, setOidcEnabled] = useState(false);
+  useEffect(() => {
+    fetch('/api/auth/oidc/config', { headers: { Accept: 'application/json' } })
+      .then((response) => response.json())
+      .then((config) => setOidcEnabled(config.enabled === true))
+      .catch(() => setOidcEnabled(false));
+  }, []);
   const location = useLocation();
   const store = useContext(StoreContext);
   const navigate = useNavigate();
@@ -48,52 +55,71 @@ export const Login = observer(() => {
   return (
     <Auth>
       <div className="w-full max-w-sm min-w-xs">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Sign in to your account</CardTitle>
-                <CardDescription>Enter your username and password below</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col gap-6 pb-3 text-left">
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem className="gap-3">
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your username" autoComplete="username" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem className="gap-3">
-                        <div className="flex items-center">
-                          <FormLabel>Password</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Input type="password" autoComplete="password" placeholder="Enter your password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting && <Spinner />}
-                    Sign in
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </form>
-        </Form>
+        {oidcEnabled ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Sign in to Faved</CardTitle>
+              <CardDescription>Use your organization account.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" asChild>
+                <a href="/api/auth/oidc">Continue with SSO</a>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">Sign in to your account</CardTitle>
+                  <CardDescription>Enter your username and password below</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-6 pb-3 text-left">
+                    <FormField
+                      control={form.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem className="gap-3">
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your username" autoComplete="username" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem className="gap-3">
+                          <div className="flex items-center">
+                            <FormLabel>Password</FormLabel>
+                          </div>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              autoComplete="password"
+                              placeholder="Enter your password"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                      {form.formState.isSubmitting && <Spinner />}
+                      Sign in
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </form>
+          </Form>
+        )}
       </div>
     </Auth>
   );

@@ -3,6 +3,8 @@
 use Controllers\AppInfoController;
 use Controllers\AuthLoginController;
 use Controllers\AuthLogoutController;
+use Controllers\AuthOidcController;
+use Controllers\AuthOidcConfigController;
 use Controllers\ImportBookmarksController;
 use Controllers\ImportPocketController;
 use Controllers\ItemsCreateController;
@@ -73,6 +75,10 @@ return [
 			],
 		],
 		'auth' => [
+			'oidc' => [
+				'GET' => AuthOidcController::class,
+				'config' => ['GET' => AuthOidcConfigController::class],
+			],
 			'login' => [
 				'POST' => AuthLoginController::class,
 			],

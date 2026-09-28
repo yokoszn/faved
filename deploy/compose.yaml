@@ -1,0 +1,43 @@
+name: faved
+services:
+  app:
+    build:
+      context: ../
+      dockerfile: Dockerfile.build
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      FAVED_PUBLIC_HTTPS: "1"
+      OIDC_ISSUER: ${OIDC_ISSUER:?required}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?required}
+      OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc_client_secret
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:?required}
+      OIDC_ALLOWED_SUBS: ${OIDC_ALLOWED_SUBS:?required}
+    volumes:
+      - /var/lib/faved/storage:/var/www/html/storage
+    secrets:
+      - oidc_client_secret
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - SETGID
+      - SETUID
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+      - /var/run/apache2:rw,nosuid,size=8m
+      - /var/lock/apache2:rw,nosuid,size=8m
+    pids_limit: 128
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(file_get_contents('http://127.0.0.1/api/auth/oidc/config') === false ? 1 : 0);"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+secrets:
+  oidc_client_secret:
+    file: /etc/faved/client-secret

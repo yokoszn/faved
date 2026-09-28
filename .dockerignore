@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.terraform
+deploy/tofu/.terraform
+deploy/tofu/*.tfstate*
+deploy/tofu/*.tfplan
+deploy/tofu/terraform.tfvars
+deploy/ansible/vars.vault.yml
+frontend/node_modules
+frontend/dist
+vendor
+storage/*
+!storage/.gitignore

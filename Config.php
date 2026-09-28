@@ -29,11 +29,27 @@ class Config
 
 	public static function getSessionLifetime(): int
 	{
-		return 60 * 60 * 24 * 7; // 7 days
+		return self::oidcEnabled() ? 60 * 60 * 8 : 60 * 60 * 24 * 7;
 	}
 
 	public static function getSessionCookieName(): string
 	{
-		return 'faved-session';
+		return self::oidcEnabled() ? 'faved-oidc-session' : 'faved-session';
+	}
+
+	public static function oidcEnabled(): bool
+	{
+		return self::environment('OIDC_ISSUER') !== '';
+	}
+
+	public static function publicHttps(): bool
+	{
+		return self::environment('FAVED_PUBLIC_HTTPS') === '1';
+	}
+
+	public static function environment(string $name): string
+	{
+		$value = getenv($name);
+		return $value !== false ? $value : ($_SERVER[$name] ?? '');
 	}
 }

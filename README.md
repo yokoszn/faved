@@ -63,6 +63,8 @@ https://github.com/user-attachments/assets/0ecbf26a-9ed8-49d9-a5ce-33d471c06fdf
 
 ## Get started
 
+This fork adds OIDC single sign-on for the self-hosted, single-user edition. Configure an HTTPS issuer, client ID, client secret file, exact HTTPS callback URL, and an allowlist of immutable OIDC `sub` values. All allowlisted people share one Faved library. Password login is disabled when OIDC is configured. See [deployment and security runbook](deploy/DEPLOYMENT.md) for the Proxmox/OpenTofu and Ansible setup.
+
 - [Self-host for free](https://faved.to/docs/getting-started/installation?utm_source=github.com&utm_medium=readme) with no external dependencies. All data is stored locally.
 - [Start in the Cloud](https://app.faved.to/signup?utm_source=github.com&utm_medium=readme) with zero setup, automatic backups and support. Your data is secured with encryption.
 

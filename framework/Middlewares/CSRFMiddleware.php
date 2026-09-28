@@ -25,7 +25,7 @@ class CSRFMiddleware extends MiddlewareAbstract
 			setcookie('CSRF-TOKEN', $token, [
 				'expires' => time() + 60 * 60 * 24, // 24 hours
 				'httponly' => false, // Accessible via JavaScript
-				'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+				'secure' => \Config::publicHttps() || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'),
 				'path' => '/',
 				'samesite' => 'Lax',
 			]);

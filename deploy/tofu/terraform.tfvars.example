@@ -1,0 +1,7 @@
+proxmox_endpoint   = "https://PVE_HOST:8006/"
+node_name          = "REPLACE_WITH_PVE_NODE_NAME"
+container_id       = 1100
+datastore_id       = "REPLACE_WITH_STORAGE_ID"
+bridge             = "vmbr0"
+ipv4_address       = "dhcp"
+root_ssh_public_key = "ssh-ed25519 REPLACE_WITH_PUBLIC_KEY"

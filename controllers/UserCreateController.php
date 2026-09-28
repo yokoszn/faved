@@ -20,6 +20,9 @@ class UserCreateController implements ControllerInterface
 {
 	public function __invoke(array $input): ResponseInterface
 	{
+		if (\Config::oidcEnabled()) {
+			throw new \Framework\Exceptions\ForbiddenException('Local accounts are disabled in SSO mode');
+		}
 		// Check if authentication is enabled (any user exists)
 		$repository = ServiceContainer::get(Repository::class);
 		$auth_enabled = $repository->userTableNotEmpty();

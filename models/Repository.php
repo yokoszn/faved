@@ -77,6 +77,12 @@ class Repository
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 	}
 
+	public function getFirstUser()
+	{
+		$stmt = $this->pdo->query('SELECT * FROM users ORDER BY id ASC LIMIT 1');
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
+
 	public function getUserByUsername(string $username)
 	{
 		$stmt = $this->pdo->prepare('SELECT * FROM users WHERE username = :username');

@@ -1,0 +1,10 @@
+faved_git_url: "https://github.com/REPLACE_WITH_FORK_OWNER/faved.git"
+faved_git_ref: "REPLACE_WITH_REVIEWED_COMMIT_SHA"
+faved_admin_keys:
+  - "ssh-ed25519 REPLACE_WITH_ADMIN_KEY"
+faved_operator_keys: []
+faved_oidc_issuer: "https://id.example.org/application/o/faved/"
+faved_oidc_client_id: "REPLACE_WITH_CLIENT_ID"
+faved_oidc_client_secret: "REPLACE_WITH_SECRET_FROM_VAULT"
+faved_oidc_redirect_uri: "https://bookmarks.example.org/api/auth/oidc"
+faved_oidc_allowed_subs: "REPLACE_WITH_IMMUTABLE_SUBJECT"

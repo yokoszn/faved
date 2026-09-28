@@ -17,6 +17,9 @@ class AuthLoginController implements ControllerInterface
 {
 	public function __invoke(array $input): ResponseInterface
 	{
+		if (\Config::oidcEnabled()) {
+			throw new \Framework\Exceptions\ForbiddenException('Use SSO to sign in');
+		}
 		// Check if authentication is enabled (any users exist)
 		$repository = ServiceContainer::get(Repository::class);
 		$auth_enabled = $repository->userTableNotEmpty();

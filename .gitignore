@@ -1,2 +1,8 @@
 .idea/
 /vendor/
+/deploy/tofu/.terraform/
+/deploy/tofu/*.tfstate*
+/deploy/tofu/*.tfplan
+/deploy/tofu/terraform.tfvars
+/deploy/ansible/inventory.ini
+/deploy/ansible/vars.vault.yml
