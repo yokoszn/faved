@@ -193,10 +193,10 @@
           PermitRootLogin no
           PasswordAuthentication no
           KbdInteractiveAuthentication no
-      notify: Reload SSH
+      notify: Restart SSH
 
   handlers:
-    - name: Reload SSH
+    - name: Restart SSH
       ansible.builtin.systemd_service:
         name: ssh
-        state: reloaded
+        state: restarted
