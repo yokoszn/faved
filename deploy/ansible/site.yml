@@ -100,20 +100,13 @@
       ansible.builtin.file:
         path: "{{ item.path }}"
         state: directory
-        owner: root
-        group: root
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
         mode: "{{ item.mode }}"
       loop:
-        - { path: /var/lib/faved, mode: '0750' }
-        - { path: /var/lib/faved/storage, mode: '0770' }
-        - { path: /etc/faved, mode: '0700' }
-
-    - name: Grant container www-data ownership of Faved storage
-      ansible.builtin.file:
-        path: /var/lib/faved/storage
-        owner: '33'
-        group: '33'
-        mode: '0700'
+        - { path: /var/lib/faved, owner: root, group: root, mode: '0750' }
+        - { path: /var/lib/faved/storage, owner: '33', group: '33', mode: '0700' }
+        - { path: /etc/faved, owner: root, group: root, mode: '0700' }
 
     - name: Check out reviewed Faved commit
       ansible.builtin.git:
